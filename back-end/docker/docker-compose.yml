@@ -1,0 +1,43 @@
+services:
+  ticketmanager-api:
+    build:
+      context: ../../
+      dockerfile: docker/Dockerfile
+    container_name: ticketmanager-api
+    ports:
+      - "5000:5000"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=${APP_DATABASE};User Id=${APP_DATABASE_USER};Password=${APP_DATABASE_PASS};TrustServerCertificate=True;
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+    networks:
+      - ticketmanager-network
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: ticketmanager-db
+    environment:
+      SA_PASSWORD: "${APP_DATABASE_PASS}"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    networks:
+      - ticketmanager-network
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost", "-U", "${APP_DATABASE_USER}", "-P", "${APP_DATABASE_PASS}", "-Q", "SELECT 1"]
+      interval: 10s
+      retries: 5
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+
+networks:
+  ticketmanager-network:
+    driver: bridge
+
+volumes:
+  sqlserver-data:
+  
