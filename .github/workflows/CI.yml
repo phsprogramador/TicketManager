@@ -1,0 +1,42 @@
+name: Continuous Integration Pipeline
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./back-end/TicketManager.sln
+
+      - name: Build the project
+        run: dotnet build ./back-end/TicketManager.sln --no-restore
+
+      - name: Run tests with coverage
+        run: dotnet test ./back-end/TicketManager.sln --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+      - name: Upload coverage to SonarCloud
+        uses: sonarsource/sonarcloud-github-action@master
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.projectKey=phsprogramador_TicketManager
+            -Dsonar.organization=phsprogramador
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.cs.coverage.reportPaths=coverage/coverage.cobertura.xml
